@@ -1,0 +1,809 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\makeatletter
+\newsavebox\pandoc@box
+\newcommand*\pandocbounded[1]{% scales image to fit in text height/width
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi% select the smaller of both
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi%
+}
+% Set default figure placement to htbp
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={Algorytm genetyczny dla problemu komiwojażera (TSP)},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{Algorytm genetyczny dla problemu komiwojażera (TSP)}
+\author{}
+\date{\vspace{-2.5em}2025-10-24}
+
+\begin{document}
+\maketitle
+
+\section{Problem komiwojażera TSP}\label{problem-komiwojaux17cera-tsp}
+
+\subsection{Założenia dotyczące problemu
+TSP}\label{zaux142oux17cenia-dotyczux105ce-problemu-tsp}
+
+Rozważany problem to klasyczny Problem Komiwojażera (Traveling Salesman
+Problem, TSP), w którym należy znaleźć najkrótszą możliwą trasę
+odwiedzającą każde miasto dokładnie raz i wracającą do punktu
+startowego.
+
+\begin{itemize}
+\item
+  Odległości między miastami są znane i symetryczne, czyli droga z
+  miasta A do B ma tę samą długość co z B do A.
+\item
+  Wartości w macierzy odległości są nieujemne i odpowiadają rzeczywistym
+  dystansom.
+\item
+  Każde miasto musi być odwiedzone dokładnie jeden raz, a trasa jest
+  cykliczna (powrót do punktu początkowego).
+\end{itemize}
+
+\section{Funkcja celu}\label{funkcja-celu}
+
+Główną metryką jest długość trasy (im mniejsza, tym lepsza).
+
+\section{Dane}\label{dane}
+
+Pliki wejściowe (macierze odległości):
+
+\begin{itemize}
+\item
+  Dane\_TSP\_127.xlsx - 127 miast
+\item
+  Dane\_TSP\_76.xlsx - 76 miast
+\item
+  Dane\_TSP\_48.xlsx - 48 miast
+\end{itemize}
+
+Algorytm wykorzystuje bezpośrednio tę macierz do oceny tras.
+
+\section{Wstęp}\label{wstux119p}
+
+Badamy algorytm genetyczny (GA) rozwiązujący problem komiwojażera (TSP).
+Celem jest porównanie wpływu kluczowych parametrów algorytmu na jakość
+znalezionych tras, przyjmując podejście one-factor-at-a-time (OFAT)
+czyli zmieniamy kolejno po jednym parametrze, a pozostałe pozostają
+stałe (\texttt{baseline}). Wyniki zapisujemy do pliku Excela i
+analizujemy wykresy.
+
+\section{Środowisko i ustawienia
+powtarzalności}\label{ux15brodowisko-i-ustawienia-powtarzalnoux15bci}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Globalny seed}: \texttt{SEED\ =\ 42} jest ustawiany na
+  początku działania skryptu.
+\item
+  \textbf{Seed dla uruchomienia}: Dla każdego pojedynczego uruchomienia
+  algorytmu, seed jest ustawiany deterministycznie
+  (\texttt{SEED\ +\ run\_id}), co pozwala na dokładne odtworzenie
+  każdego eksperymentu.
+\end{itemize}
+
+\section{Założenia dotyczące algorytmu
+genetycznego}\label{zaux142oux17cenia-dotyczux105ce-algorytmu-genetycznego}
+
+Algorytm genetyczny jest metodą metaheurystyczną czyli nie gwarantuje
+znalezienia rozwiązania optymalnego, ale pozwala znaleźć rozwiązania
+bliskie optymalnym w rozsądnym czasie.
+
+Rozwiązania (osobniki) są reprezentowane jako permutacje miast -
+kolejność odwiedzin miast określa trasę.
+
+Populacja osobników ewoluuje przez wiele pokoleń (n\_gen) w kierunku
+coraz krótszych tras.
+
+\section{Opis parametrów}\label{opis-parametruxf3w}
+
+\begin{itemize}
+\item
+  n\_pop oznacza rozmiar populacji; populacja początkowa jest tworzona
+  losowo, a potem każda generacja jest w pełni zastępowana przez
+  potomków + ewentualnie elity
+\item
+  n\_gen oznacza liczbę generacji; im więcej generacji, tym dłużej trwa
+  ewolucja i algorytm ma więcej szans na poprawę wyniku ale zbyt wiele
+  generacji może nie przynosić dalszych korzyści
+\item
+  p\_mut czyli prawdopodobieństwo mutacji, pomaga uciekać z lokalnych
+  minimów; szansa, że po utworzeniu dziecka, jego trasa zostanie losowo
+  zmieniona;w tym przypadku polega na zamianie (swap) dwóch miast w
+  trasie; nie gwarantuje poprawy rozwiązania; (!nie należy mylić mutacji
+  z ulepszaniem local search (ruchami sąsiedzkimi) które działają już po
+  mutacji i próbują celowo poprawić trasę, a nie losowo ją zmienić)
+\item
+  p\_cx czyli prawdopodobieństwo krzyżowania, częstotliwość rekombinacji
+  rodziców; to szansa, że z dwóch rodziców powstanie nowy potomek, który
+  łączy ich cechy; jeśli losowanie się nie powiedzie, potomek jest po
+  prostu kopią jednego rodzica;
+\item
+  selection\_method czyli metody selekcji; decyduje kto zostanie wybrany
+  jako rodzic do stworzenia potomka, wszystkie metody dążą do tego, by
+  lepsi mieli większą szansę na rozmnożenie, ale każda robi to trochę
+  inaczej:
+\end{itemize}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi})}
+\item
+  tournament (selekcja turniejowa) - losuje k osobników z populacji, z
+  tych k wybiera tego o najkrótszej trasie (najlepszy), pozwala
+  kontrolować siłę selekcji przez tournament\_k; im większe k, tym
+  silniejsza selekcja (bo częściej wygra najlepszy z losowanych)
+\item
+  roulette (selekcja ruletkowa) - każdy osobnik dostaje „wagę'' na
+  ruletce proporcjonalne do swojej jakości (u nas odwrotnie do długości
+  trasy); daje większe szanse dobrym trasom, ale też pozwala czasem
+  „słabszym'' wejść do gry (bo utrzymuje różnorodność)
+\item
+  rank (selekcja rankingowa) - najlepszy osobnik dostaje najwyższy
+  „ranking'', najgorszy najniższy; szansa na wybór zależy od pozycji w
+  rankingu, a nie bezpośrednio od długości trasy.
+\end{enumerate}
+
+\begin{itemize}
+\tightlist
+\item
+  crossover\_method czyli metody krzyżowania, różne sposoby zachowania
+  porządku i fragmentów rodziców w permutacji, czyli w jaki sposób
+  łączone są ich geny (kolejności miast):
+\end{itemize}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi})}
+\item
+  PMX (Partially Mapped Crossover) - wybierany jest losowy fragment (np.
+  4-8 miast) z pierwszego rodzica i kopiowany do dziecka, reszta miast
+  uzupełniana jest na podstawie drugiego rodzica, zgodnie z mapowaniem
+  między fragmentami.
+\item
+  OX (Order Crossover) - fragment z jednego rodzica zostaje zachowany,
+  pozostałe miasta są wypełniane w kolejności ich występowania w drugim
+  rodzicu; dziecko dziedziczy „kolejność odwiedzin'', a niekoniecznie
+  dokładne pozycje.
+\item
+  CX (Cycle Crossover) - tworzy cykle powiązań między genami rodziców
+  (np. miasto A u pierwszego jest w tym samym miejscu co B u drugiego),
+  naprzemiennie bierze cykle z rodzica 1 i 2.
+\end{enumerate}
+
+\begin{itemize}
+\tightlist
+\item
+  local\_search\_tries: liczba prób lokalnego ulepszenia; czyli liczba
+  ruchów sąsiedzkich, które są losowo testowane na każdym dziecku, by
+  sprawdzić, czy da się poprawić trasę:
+\end{itemize}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi})}
+\item
+  swap - zamiana dwóch miast miejscami,
+\item
+  2-opt - odwrócenie fragmentu trasy,
+\item
+  insertion - wyjęcie miasta i wstawienie go gdzie indziej
+\end{enumerate}
+
+! Uwaga ! Zamiast testować ruchy swap, insertion i two\_opt osobno,
+funkcja local\_improve losowo wybiera jeden z nich w każdej próbie.
+
+\begin{itemize}
+\tightlist
+\item
+  elite (elitaryzm) oznacza liczbę najlepszych osobników kopiowanych bez
+  zmian; chroni najlepsze rozwiązania, ale zbyt duża wartość elite
+  mogłaby zmniejszyć różnorodność.
+\end{itemize}
+
+\section{Usprawnienie mechanizm „wnuka''
+(grandchild)}\label{usprawnienie-mechanizm-wnuka-grandchild}
+
+Mechanizm „wnuka'' (grandchild) to proste rozszerzenie standardowego
+schematu rozmnażania w algorytmie genetycznym. Po wygenerowaniu potomka
+(child) z pary rodziców istnieje pewne prawdopodobieństwo
+p\_make\_grandchild, że z potomka powstanie dodatkowy twór - „wnuk''
+(grandchild). Wnuk powstaje przez zastosowanie kolejnego, krótkiego
+operatora naprawczego (np. prostej mutacji lub szybkiego lokalnego
+ulepszania). Do populacji przyjmowany jest lepszy z pary (child vs
+grandchild). Intuicyjnie, zamiast przyjmować bezwarunkowo pojedynczego
+potomka, sprawdzamy jedną dodatkową opcję „bliźniaczą'' i zachowujemy
+tę, która daje krótszą trasę.
+
+Parametry:
+
+\begin{itemize}
+\item
+  p\_make\_grandchild (= {[}0,1{]}) - prawdopodobieństwo wygenerowania
+  wnuka dla każdego potomka,
+\item
+  grandchild\_method = \{`mutate', `local\_improve'\} - sposób
+  wytworzenia wnuka: prosta mutacja (swap) lub krótki lokalny search
+  (np. local\_improve z ruchem two\_opt albo mieszany),
+\item
+  grandchild\_local\_tries - liczba prób dla lokalnego ulepszania wnuka
+  (jeśli None, używany jest parametr local\_search\_tries).
+\end{itemize}
+
+Mechanizm wnuka daje prosty kompromis:
+
+\begin{itemize}
+\item
+  zwiększa szansę na znalezienie natychmiastowej ulepszonej wersji
+  potomka (przy niskim koszcie - jedno wywołanie mutacji lub krótkiego
+  local search);
+\item
+  jest prosty do kontrolowania przez pojedynczy parametr
+  p\_make\_grandchild.
+\end{itemize}
+
+Typowe efekty obserwowane w eksperymentach:
+
+\begin{itemize}
+\item
+  umiarkowane zwiększenie jakości końcowych rozwiązań (niższe średnie i
+  lepsze mediany),
+\item
+  niewielki wzrost wariancji (jeśli p\_make\_grandchild zbyt duże),
+\end{itemize}
+
+Jednak po analizie okazuje się, że żaden z najlepszych wyników nie miał
+włączonego mechanizmu wnuka.
+
+\subsection{Baseline (parametry
+domyślne)}\label{baseline-parametry-domyux15blne}
+
+baseline = \{ - `n\_pop': 100, - `n\_gen': 300, - `p\_mut': 0.03, -
+`p\_cx' : 0.9, - `selection\_method': `tournament', -
+`crossover\_method': `pmx', - `local\_search\_tries': 5, -
+`local\_moves': {[}`swap',`two\_opt',`insertion'{]}, - `elite': 3, -
+`tournament\_k': 3, - `p\_make\_grandchild': 0.0, -
+`grandchild\_method': `mutate', - `grandchild\_local\_tries': None \}
+
+\subsection{Parametry testowane (OFAT)}\label{parametry-testowane-ofat}
+
+Dla każdego parametru testujemy wartości:
+
+\begin{itemize}
+\item
+  n\_gen : {[}100, 300, 600, 1200{]}
+\item
+  n\_pop : {[}50, 100, 200, 400{]}
+\item
+  p\_mut : {[}0.01, 0.03, 0.07, 0.15{]}
+\item
+  p\_cx : {[}0.6, 0.75, 0.9, 1.0{]}
+\item
+  selection\_method : {[}`tournament', `roulette', `rank'{]}
+  (kategorialnie)
+\item
+  crossover\_method : {[}`pmx', `ox', `cx'{]} (kategorialnie)
+\item
+  local\_search\_tries : {[}0, 5, 20, 50{]}
+\item
+  crossover\_method`: {[}`pmx', `ox', `cx'{]},
+\item
+  selection\_method`: {[}`tournament', `roulette', `rank'{]}
+\end{itemize}
+
+Dla każdej konfiguracji powtarzamy uruchomienie repetitions razy 10.
+
+\section{Dokładna analiza
+wyników}\label{dokux142adna-analiza-wynikuxf3w}
+
+\subsection{Dla 48 miast}\label{dla-48-miast}
+
+\subsubsection{parametr elite}\label{parametr-elite}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/elite/boxplot_best_length.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/elite/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/elite/time_vs_best_scatter.png}
+
+Wykres pudełkowy pokazuje, jak zmieniała się długość najlepszej trasy w
+zależności od liczby osobników elity. Dla wartości elite = 3 (na
+wykresie pudełka nie są po kolei) długości tras są mniejsze i bardziej
+stabilne niż dla pozostałych wartości. Dla zbyt dużej elity, wyniki są
+bardziej rozproszone, co oznacza większą losowość i gorszą
+powtarzalność. Możemy stwierdzić, że umiarkowana wartość elity (około
+2-3) daje najlepszy kompromis między jakością a stabilnością wyników. Na
+drugim wykresie przedstawiamy średnią długość najlepszej trasy oraz
+odchylenie standardowe dla różnych wartości elity. Najniższa średnia
+wartość występuje przy elite = 3, więc mamy potwierdzenie, że ta
+konfiguracja pozwala osiągać najlepsze rezultaty. Dla większej elity,
+widać wyraźnie większe odchylenie standardowe, czyli mniejszą stabilność
+działania algorytmu. Zbyt duża liczba elitarnych osobników może
+utrudniać znalezienie optymalnej trasy.
+
+\subsubsection{parametr n\_gen}\label{parametr-n_gen}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/n_gen/boxplot_best_length.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/n_gen/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/n_gen/time_vs_best_scatter.png}
+
+Wraz ze wzrostem liczby generacji obserwujemy wyraźną poprawę jakości
+rozwiązań czyli mniejszą długość najlepszej trasy. Na boxplocie widać,
+że przy małej liczbie generacji wyniki są gorsze i różne, natomiast przy
+300-600 generacjach rozrzut jest mniejszy, a wartości lepsze. Średnie
+wartości na wykresie 2. potwierdzają, że około 300-600 generacji daje
+najniższe średnie długości tras. Dla 1000 generacji wynik nie poprawia
+się znacząco, natomiast czas obliczeń rośnie, co widać na wykresie 3.
+Zatem zwiększanie liczby generacji po pewnym progu przynosi coraz
+mniejsze korzyści, a tylko wydłuża działanie algorytmu. Optymalny
+kompromis między jakością a czasem obliczeń osiągamy przy około 300-600
+generacjach.
+
+\subsubsection{parametr n\_pop}\label{parametr-n_pop}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/n_pop/boxplot_best_length.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/n_pop/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/n_pop/time_vs_best_scatter.png}
+Parametr liczby osobników w populacji wpływa na jakość rozwiązań i czas
+działania algorytmu. Na wykresach widać, że dla małych populacji wyniki
+są bardziej zmienne, ale średnia długość tras jest zbliżona do
+najlepszych przypadków. Przy populacji 200 uzyskano najniższe wartości
+długości tras. Dla większych populacji (jak 400), poprawa jakości nie
+jest już zauważalna, natomiast czas obliczeń znacznie wzrasta. Z wykresu
+3. widać, że im większa populacja, tym dłuższy czas działania, ale nie
+zawsze idzie to w parze z lepszym wynikiem. Optymalna liczebność
+populacji w tym przypadku to około 200 osobników.
+
+\subsubsection{parametr p\_cx}\label{parametr-p_cx}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/p_cx/boxplot_best_length.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/p_cx/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/p_cx/time_vs_best_scatter.png}
+
+Prawdopodobieństwo krzyżowania wpływa na intensywność wymiany materiału
+genetycznego między osobnikami. Na wykresach widać, że wartości
+pośrednie prowadzą do uzyskania najkrótszych tras oraz stosunkowo
+niskiego rozrzutu wyników. Przy zbyt niskim p\_cx (0.6) wyniki są gorsze
+i bardziej niestabilne.Na wykresie czasu widać, że różnice w czasie
+działania są niewielkie, więc ten parametr nie wpływa istotnie na
+wydajność. Można więc uznać, że optymalny zakres p\_cx to około
+0,75-0,9, gdzie algorytm osiąga najlepsze wyniki jakościowe.
+
+\subsubsection{parametr p\_mut}\label{parametr-p_mut}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/p_mut/boxplot_best_length.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/p_mut/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/p_mut/time_vs_best_scatter.png}
+
+Zbyt małe wartości p\_mut (0,01) powodowały przedwczesną zbieżność i
+gorsze wyniki. Wraz ze wzrostem do 0,03 i , poprawiała się zarówno
+średnia, jak i stabilność rezultatów. Przy p\_mut = 0,15 obserwowano już
+spadek jakości, zbyt częste mutacje zaburzały proces ewolucji. Najlepszy
+balans uzyskano przy prawdopodobieństwie wynoszącym około 0,05-0,07.
+
+\subsubsection{parametr
+p\_make\_grandchild}\label{parametr-p_make_grandchild}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/p_make_grandchild/boxplot_best_length.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/p_make_grandchild/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/p_make_grandchild/time_vs_best_scatter.png}
+
+Większy udział „wnuków'' w populacji (czyli osobników tworzonych z
+dodatkowej rekombinacji) prowadził do nieco lepszych wyników, ale też
+większej zmienności. Dla p\_make\_grandchild = 0,5 wyniki były
+najbardziej stabilne, a dalsze zwiększanie tej wartości nie dawało już
+korzyści. Niskie wartości parametru skutkowały szybkim utknięciem w
+lokalnych minimach. Optymalny zakres to 0,4-0,5.
+
+\subsubsection{parametr
+local\_search\_tries}\label{parametr-local_search_tries}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/local_search_tries/boxplot_best_length.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/local_search_tries/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/local_search_tries/time_vs_best_scatter.png}
+
+Zwiększenie liczby prób lokalnego przeszukiwania z 0 do 5 powoduje
+drastyczną poprawę wyników (średnia długość trasy spada z bardzo
+wysokich wartości) i znacznie zmniejsza rozrzut wyników. Dalsze
+zwiększenie prób do 10 i 20 daje już niewielkie dalsze korzyści. Scatter
+time vs best\_length pokazuje, że konfiguracje z większą liczbą prób
+dają lepsze długości ale wymagają więcej czasu.
+
+\subsubsection{parametr
+crossover\_method}\label{parametr-crossover_method}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/crossover_method/boxplot_best_length.png}\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/crossover_method/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/crossover_method/time_vs_best_scatter.png}
+
+PMX pozostaje najbardziej stabilny.
+
+\subsubsection{parametr
+selection\_method}\label{parametr-selection_method}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/selection_method/boxplot_best_length.png}\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/selection_method/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_48/selection_method/time_vs_best_scatter.png}
+Selekcja poprzez turniej zdaje się być najlepszym wyborem.
+
+\subsection{Dane 76 miast}\label{dane-76-miast}
+
+\subsubsection{parametr elite}\label{parametr-elite-1}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/elite/boxplot_best_length.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/elite/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/elite/time_vs_best_scatter.png}
+Rozmiar elity znacząco wpływała na stabilność wyników. Dla elite = 1-3
+trasy były krótsze i bardziej powtarzalne, natomiast przy elite = 10
+pojawiało się więcej outlierów. Zbyt duża elita ograniczała różnorodność
+populacji, przez co algorytm szybciej tracił zdolność eksploracji.
+Najbardziej zrównoważone rezultaty uzyskano przy elite = 2.
+
+\subsubsection{parametr n\_gen}\label{parametr-n_gen-1}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/n_gen/boxplot_best_length.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/n_gen/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/n_gen/time_vs_best_scatter.png}
+
+Wraz ze wzrostem liczby generacji poprawiała się jakość rozwiązań, choć
+przy n\_gen \textgreater{} 600 poprawa była już minimalna. Dla n\_gen =
+300-600 algorytm osiągał stabilne i powtarzalne wyniki. Wykres czasu
+pokazuje, że wzrost liczby generacji liniowo zwiększał koszt obliczeń,
+więc rekomendowany kompromis to n\_gen = 600.
+
+\subsubsection{parametr n\_pop}\label{parametr-n_pop-1}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/n_pop/boxplot_best_length.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/n_pop/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/n_pop/time_vs_best_scatter.png}
+
+Zwiększenie rozmiaru populacji poprawiało medianę długości tras aż do
+n\_pop = 200. Dla n\_pop = 400 efekty się wyrównywały, co sugeruje
+osiągnięcie wystarczającej różnorodności. Mniejsze populacje
+charakteryzowały się większą wariancją wyników. Dlatego n\_pop = 200
+daje najlepszy stosunek jakości do czasu.
+
+\subsubsection{parametr p\_cx}\label{parametr-p_cx-1}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/p_cx/boxplot_best_length.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/p_cx/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/p_cx/time_vs_best_scatter.png}
+
+Najlepsze wyniki uzyskano przy p\_cx = 0.9, co potwierdza skuteczność
+częstego krzyżowania dla średniej wielkości zbioru. Dla mniejszych
+wartości (0.6-0.75) trasy były dłuższe, a rozrzut wyników większy. p\_cx
+= 1.0 nie przyniosło dalszej poprawy, sugerując nasycenie efektu.
+
+\subsubsection{parametr p\_mut}\label{parametr-p_mut-1}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/p_mut/boxplot_best_length.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/p_mut/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/p_mut/time_vs_best_scatter.png}
+
+Średni poziom mutacji (0.05-0.07) okazał się najkorzystniejszy. Zbyt
+niskie wartości prowadziły do stagnacji, a zbyt wysokie (0.15)
+powodowały losowe skoki i niestabilność wyników. Na wykresie widać, że
+wariancja była najmniejsza przy p\_mut = 0.05, co wskazuje na dobrą
+równowagę eksploracji i eksploatacji.
+
+\subsubsection{parametr
+p\_make\_grandchild}\label{parametr-p_make_grandchild-1}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/p_make_grandchild/boxplot_best_length.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/p_make_grandchild/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/p_make_grandchild/time_vs_best_scatter.png}
+
+Parametr ten miał umiarkowany wpływ na wyniki, jednak dla średnich
+wartości (ok. 0,4) uzyskano najlepsze trasy. Niskie wartości powodowały
+utratę różnorodności, a zbyt wysokie - nadmierną losowość. Na wykresie
+mean\_std widać, że odchylenie standardowe było najmniejsze właśnie w
+tym zakresie.
+
+\subsubsection{parametr
+local\_search\_tries}\label{parametr-local_search_tries-1}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/local_search_tries/boxplot_best_length.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/local_search_tries/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/local_search_tries/time_vs_best_scatter.png}
+
+Podobnie jak w mniejszym zbiorze, wyłączenie lokalnego przeszukiwania
+skutkuje znacznie gorszymi trasami, natomiast przejście do wartości 5-20
+daje duży skok jakości (średnie spadają). Wartości 10-20 nie dają już
+proporcjonalnie większej poprawy jakości. Wnioskiem jest, że dla tej
+instancji także warto włączyć krótkie lokalne ulepszanie.
+
+\subsubsection{parametr
+crossover\_method}\label{parametr-crossover_method-1}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/crossover_method/boxplot_best_length.png}\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/crossover_method/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/crossover_method/time_vs_best_scatter.png}
+
+PMX daje najlepsze wyniki.
+
+\subsubsection{parametr
+selection\_method}\label{parametr-selection_method-1}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/selection_method/boxplot_best_length.png}\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/selection_method/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_76/selection_method/time_vs_best_scatter.png}
+Tutaj również optymalnym wyborem jest selekcja poprzez turniej.
+
+\subsection{Dane 127 miast}\label{dane-127-miast}
+
+\subsubsection{parametr elite}\label{parametr-elite-2}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/elite/boxplot_best_length.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/elite/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/elite/time_vs_best_scatter.png}
+
+Dla największego zestawu danych umiarkowana elita (2-3 osobniki) była
+kluczowa dla stabilności. Przy braku elity wyniki były niestabilne, a
+najlepsze trasy często ginęły między pokoleniami. Natomiast zbyt duża
+elita (np. 10) powodowała stagnację i brak poprawy po kilku generacjach.
+Optymalna wartość to 3.
+
+\subsubsection{parametr n\_gen}\label{parametr-n_gen-2}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/n_gen/boxplot_best_length.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/n_gen/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/n_gen/time_vs_best_scatter.png}
+
+Zwiększanie liczby generacji przynosiło wyraźną poprawę jakości
+rozwiązań aż do poziomu 1200. Wykresy pokazują, że dla n\_gen
+\textgreater{} 600 algorytm wciąż znajduje lepsze rozwiązania, choć z
+malejącym tempem przyrostu jakości. Czas obliczeń rośnie jednak
+proporcjonalnie, więc kompromisowy wybór to n\_gen = 600-900.
+
+\subsubsection{parametr n\_pop}\label{parametr-n_pop-2}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/n_pop/boxplot_best_length.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/n_pop/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/n_pop/time_vs_best_scatter.png}
+
+Dla dużej instancji największy wpływ miał rozmiar populacji. n\_pop =
+200 zapewniał wyraźnie lepsze wyniki niż 50 czy 100, a dalsze
+zwiększanie do 400 poprawiało medianę już tylko nieznacznie.
+Jednocześnie czas wzrastał ponad dwukrotnie, dlatego n\_pop = 200 uznano
+za najbardziej efektywny kompromis.
+
+\subsubsection{parametr p\_cx}\label{parametr-p_cx-2}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/p_cx/boxplot_best_length.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/p_cx/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/p_cx/time_vs_best_scatter.png}
+
+Najniższe długości tras uzyskano przy p\_cx = 0.9. Dla mniejszych
+wartości poprawa była wolniejsza, a dla p\_cx = 1.0 - zauważalnie
+większa wariancja. Wynika to z tego, że całkowite krzyżowanie wszystkich
+par rodziców zwiększa losowość populacji. Optymalny zakres to p\_cx =
+0.85-0.9.
+
+\subsubsection{parametr p\_mut}\label{parametr-p_mut-2}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/p_mut/boxplot_best_length.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/p_mut/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/p_mut/time_vs_best_scatter.png}
+
+Dla największej liczby miast mutacja miała silniejszy wpływ. Przy p\_mut
+= 0.01 wyniki były bardzo słabe, a przy p\_mut = 0.15 - niestabilne.
+Najlepsze rezultaty pojawiły się przy p\_mut = 0.07, gdzie algorytm
+utrzymywał równowagę między eksploracją a zbieżnością.
+
+\subsubsection{parametr
+p\_make\_grandchild}\label{parametr-p_make_grandchild-2}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/p_make_grandchild/boxplot_best_length.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/p_make_grandchild/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/p_make_grandchild/time_vs_best_scatter.png}
+
+Wraz ze wzrostem p\_make\_grandchild poprawiała się jakość rozwiązań do
+wartości około 0.5. Powyżej tej granicy efekty się stabilizowały, ale
+czas obliczeń wzrósł. Dla p\_make\_grandchild = 0.4-0.5 wyniki były
+najrówniejsze i najczęściej dawały najkrótsze trasy.
+
+\subsubsection{parametr
+local\_search\_tries}\label{parametr-local_search_tries-2}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/local_search_tries/boxplot_best_length.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/local_search_tries/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/local_search_tries/time_vs_best_scatter.png}
+
+Tutaj efekt jest jeszcze bardziej widoczny, brak lokalnego ulepszania
+daje najgorsze wyniki (średnio \textasciitilde340-360k), a włączenie 5
+prób obniża średnią do ok. 150k, natomiast dalsze zwiększanie do 10 i 20
+prób przynosi stopniowe, ale widoczne dalsze usprawnienia. Najlepsze t
+rasy uzyskuje się kosztem najdłuższego czasu.
+
+\subsubsection{parametr
+crossover\_method}\label{parametr-crossover_method-2}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/crossover_method/boxplot_best_length.png}\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/crossover_method/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/crossover_method/time_vs_best_scatter.png}
+
+Krzyżowanie PMX daje najlepsze wyniki.
+
+\subsubsection{parametr
+selection\_method}\label{parametr-selection_method-2}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/selection_method/boxplot_best_length.png}\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/selection_method/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel/plots/Dane_TSP_127/selection_method/time_vs_best_scatter.png}
+
+I jak w każdym z wcześniejszych przypadków, to selekcja poprzez turniej
+wypada najlepiej.
+
+\section{Podsumowanie i najlepszy zestaw
+parametrów}\label{podsumowanie-i-najlepszy-zestaw-parametruxf3w}
+
+\subsection{48 miast}\label{miast}
+
+Na podstawie przeprowadzonej analizy dla problemu TSP z 48 miastami,
+dostajemy najlepszy wynik (best\_length): 10628. To dzięki konfiguracji:
+
+\begin{itemize}
+\item
+  n\_pop = 200
+\item
+  n\_gen = 300
+\item
+  p\_mut = 0.03
+\item
+  p\_cx = 0.9
+\item
+  selection\_method = tournament
+\item
+  crossover\_method = pmx
+\item
+  local\_search\_tries = 5
+\item
+  elite = 3
+\item
+  p\_make\_grandchild = 0
+\end{itemize}
+
+Najlepszy wynik uzyskaliśmy przy umiarkowanie dużej populacji i
+standardowej liczbie generacji. Konfiguracja ta potwierdza skuteczność
+parametrów bazowych, zwłaszcza włączenia algorytmu local\_search\_tries
+i elitaryzmu. Wyłączenie mechanizmu „wnuka'' (p\_make\_grandchild = 0)
+okazało się korzystne.
+
+\subsection{76 miast}\label{miast-1}
+
+Na podstawie przeprowadzonej analizy dla problemu TSP z 76 miastami,
+dostajemy najlepszy wynik (best\_length): 108880. To dzięki
+konfiguracji:
+
+\begin{itemize}
+\item
+  n\_pop = 200
+\item
+  n\_gen = 300
+\item
+  p\_mut = 0.03
+\item
+  p\_cx = 0.9
+\item
+  selection\_method = tournament
+\item
+  crossover\_method = pmx
+\item
+  local\_search\_tries = 5
+\item
+  elite = 3
+\item
+  p\_make\_grandchild = 0
+\end{itemize}
+
+Dla instancji średniej wielkości, najlepsza konfiguracja okazała się
+identyczna jak dla problemu 48 miast. Potwierdza to wysoką stabilność i
+skuteczność tej kombinacji parametrów dla problemów tej skali.
+
+\subsection{127 miast}\label{miast-2}
+
+Na podstawie przeprowadzonej analizy dla problemu TSP ze 127 miastami,
+dostajemy najlepszy wynik (best\_length): 120101. To dzięki
+konfiguracji:
+
+\begin{itemize}
+\item
+  n\_pop = 100
+\item
+  n\_gen = 600
+\item
+  p\_mut = 0.03
+\item
+  p\_cx = 0.9
+\item
+  selection\_method = tournament
+\item
+  crossover\_method = pmx
+\item
+  local\_search\_tries = 5
+\item
+  elite = 3
+\item
+  p\_make\_grandchild = 0
+\end{itemize}
+
+Dla największego problemu optymalna strategia uległa zmianie, algorytm
+potrzebował mniejszej populacji, ale dwa razy dłuższej ewolucji.
+Wskazuje to, że dla bardziej złożonych problemów kluczowe znaczenie ma
+większa liczba iteracji i dłuższy czas na zbieganie. Warto jednak
+zauważyć, że wszystkie pozostałe kluczowe parametry (mutacja,
+krzyżowanie, selekcja, local search, elita i ``wnuk'') pozostały
+identyczne jak w mniejszych instancjach.
+
+\subsection{Wnioski}\label{wnioski}
+
+Analizując konfiguracje, które dały absolutnie najlepsze wyniki dla
+każdej z trzech instancji problemu, można zauważyć zaskakującą spójność.
+Aż 7 z 9 testowanych grup parametrów było identycznych dla najlepszych
+przebiegów:
+
+\begin{itemize}
+\item
+  p\_mut = 0.03
+\item
+  p\_cx = 0.9
+\item
+  selection\_method = tournament
+\item
+  crossover\_method = pmx
+\item
+  local\_search\_tries = 5
+\item
+  elite = 3
+\item
+  p\_make\_grandchild = 0
+\end{itemize}
+
+Taka konfiguracja okazała się najbardziej uniwersalna. Nasze
+usprawnienie - mechanizm „wnuka'' w żadnym z najlepszych przypadków nie
+przyczynił się do poprawy wyniku.
+
+\end{document}

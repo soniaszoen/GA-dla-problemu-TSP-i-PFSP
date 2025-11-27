@@ -1,0 +1,825 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\makeatletter
+\newsavebox\pandoc@box
+\newcommand*\pandocbounded[1]{% scales image to fit in text height/width
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi% select the smaller of both
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi%
+}
+% Set default figure placement to htbp
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={Algorytm genetyczny dla permutacyjnego problemu przepływowego (PFSP)},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{Algorytm genetyczny dla permutacyjnego problemu przepływowego
+(PFSP)}
+\author{}
+\date{\vspace{-2.5em}2025-10-24}
+
+\begin{document}
+\maketitle
+
+\section{Problem Przepływowy (PFSP)}\label{problem-przepux142ywowy-pfsp}
+
+Rozważany problem to \textbf{Permutacyjny Problem Przepływowy}
+(Permutation Flow Shop Scheduling Problem, PFSP). Celem jest znalezienie
+optymalnej sekwencji (permutacji) \texttt{N} zadań, które muszą być
+przetworzone na \texttt{M} maszynach w tej samej kolejności. Kryterium
+optymalizacji jest minimalizacja czasu zakończenia ostatniego zadania na
+ostatniej maszynie, znanego jako \textbf{makespan}.
+
+\subsection{Założenia dotyczące problemu
+PFSP}\label{zaux142oux17cenia-dotyczux105ce-problemu-pfsp}
+
+\begin{itemize}
+\tightlist
+\item
+  Wszystkie zadania (\texttt{N}) są dostępne do przetwarzania od samego
+  początku.
+\item
+  Każde zadanie musi przejść przez wszystkie maszyny (\texttt{M}) w tej
+  samej, z góry ustalonej kolejności.
+\item
+  Kolejność przetwarzania zadań jest identyczna na każdej maszynie (stąd
+  nazwa ``permutacyjny'').
+\item
+  Czasy przetwarzania każdego zadania na każdej maszynie są znane i
+  nieujemne.
+\item
+  Operacje nie mogą być przerywane.
+\item
+  Każda maszyna może w danym momencie przetwarzać tylko jedno zadanie.
+\end{itemize}
+
+\subsection{Funkcja celu}\label{funkcja-celu}
+
+Główną metryką oceny jakości rozwiązania jest \textbf{makespan}. Jest to
+czas, w którym zakończy się przetwarzanie ostatniego zadania w sekwencji
+na ostatniej maszynie. Im mniejszy makespan, tym lepsze rozwiązanie.
+
+\subsection{Dane}\label{dane}
+
+Plik wejściowy zawiera macierz czasów przetwarzania zadań na maszynach:
+
+\begin{itemize}
+\tightlist
+\item
+  \texttt{Dane\_PFSP\_50\_20.xlsx} - instancja z 50 zadaniami i 20
+  maszynami.
+\item
+  \texttt{Dane\_PFSP\_200\_10.xlsx} - instancja z 200 zadaniami i 10
+  maszynami.
+\item
+  \texttt{Dane\_PFSP\_100\_10.xlsx} - instancja z 100 zadaniami i 10
+  maszynami.
+\end{itemize}
+
+Algorytm wykorzystuje tę macierz do oceny (obliczenia makespanu) każdej
+permutacji.
+
+\section{Wstęp}\label{wstux119p}
+
+Badamy algorytm genetyczny (GA rozwiązujący problem PFSP. Celem jest
+porównanie wpływu kluczowych parametrów algorytmu na jakość znalezionych
+tras, przyjmując podejście one-factor-at-a-time (OFAT) czyli zmieniamy
+kolejno po jednym parametrze, a pozostałe pozostają stałe
+(\texttt{baseline}). Wyniki zapisujemy do pliku Excela i analizujemy
+wykresy.
+
+\subsection{Środowisko i powtarzalność
+eksperymentów}\label{ux15brodowisko-i-powtarzalnoux15bux107-eksperymentuxf3w}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Globalny seed}: \texttt{SEED\ =\ 42} jest ustawiany na
+  początku działania skryptu.
+\item
+  \textbf{Seed dla uruchomienia}: Dla każdego pojedynczego uruchomienia
+  algorytmu, seed jest ustawiany deterministycznie
+  (\texttt{SEED\ +\ run\_id}), co pozwala na dokładne odtworzenie
+  każdego eksperymentu.
+\end{itemize}
+
+\subsection{Założenia dotyczące algorytmu
+genetycznego}\label{zaux142oux17cenia-dotyczux105ce-algorytmu-genetycznego}
+
+Algorytm genetyczny jest metodą metaheurystyczną czyli nie gwarantuje
+znalezienia rozwiązania optymalnego, ale pozwala znaleźć rozwiązania
+bliskie optymalnym w rozsądnym czasie.
+
+Rozwiązania (osobniki) są reprezentowane jako permutacje zadań -
+kolejność wykonania zadań określa sekwencję. Populacja osobników
+ewoluuje w kierunku coraz niższych wartości makespan.
+
+\section{Opis parametrów}\label{opis-parametruxf3w}
+
+\begin{itemize}
+\item
+  n\_pop oznacza rozmiar populacji; populacja początkowa jest tworzona
+  losowo, a potem każda generacja jest w pełni zastępowana przez
+  potomków + ewentualnie elity.
+\item
+  n\_gen oznacza liczbę generacji; im więcej generacji, tym dłużej trwa
+  ewolucja i algorytm ma więcej szans na poprawę wyniku, ale zbyt wiele
+  generacji może nie przynosić dalszych korzyści.
+\item
+  p\_mut czyli prawdopodobieństwo mutacji, pomaga uciekać z lokalnych
+  minimów; szansa, że po utworzeniu dziecka, jego permutacja zostanie
+  losowo zmieniona; w tym przypadku polega na zamianie (swap) dwóch
+  zadań w kolejności; nie gwarantuje poprawy rozwiązania; (!nie należy
+  mylić mutacji z ulepszaniem local search (ruchami sąsiedzkimi), które
+  działają już po mutacji i próbują celowo poprawić permutację (obniżyć
+  jej makespan), a nie losowo ją zmienić).
+\item
+  p\_cx czyli prawdopodobieństwo krzyżowania, częstotliwość rekombinacji
+  rodziców; to szansa, że z dwóch rodziców powstanie nowy potomek, który
+  łączy ich cechy; jeśli losowanie się nie powiedzie, potomek jest po
+  prostu kopią jednego rodzica.
+\item
+  selection\_method czyli metody selekcji; decyduje kto zostanie wybrany
+  jako rodzic do stworzenia potomka, wszystkie metody dążą do tego, by
+  lepsi (osobnicy o niższym makespan) mieli większą szansę na
+  rozmnożenie, ale każda robi to trochę inaczej:
+\end{itemize}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi})}
+\item
+  tournament (selekcja turniejowa) - losuje k osobników z populacji, z
+  tych k wybiera tego o najniższym makespanie (najlepszy), pozwala
+  kontrolować siłę selekcji przez tournament\_k; im większe k, tym
+  silniejsza selekcja.
+\item
+  roulette (selekcja ruletkowa) - każdy osobnik dostaje „wagę'' na
+  ruletce proporcjonalną do swojej jakości (u nas odwrotnie do wartości
+  makespan); daje większe szanse dobrym permutacjom, ale też pozwala
+  czasem „słabszym'' wejść do gry (bo utrzymuje różnorodność).
+\item
+  rank (selekcja rankingowa) - najlepszy osobnik dostaje najwyższy
+  „ranking'', najgorszy najniższy; szansa na wybór zależy od pozycji w
+  rankingu, a nie bezpośrednio od wartości makespan. Działa stabilniej
+  niż ruletka, gdy np. jeden osobnik jest drastycznie lepszy od reszty.
+\end{enumerate}
+
+\begin{itemize}
+\tightlist
+\item
+  crossover\_method czyli metody krzyżowania, różne sposoby zachowania
+  porządku i fragmentów rodziców w permutacji, czyli w jaki sposób
+  łączone są ich geny (kolejności zadań):
+\end{itemize}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi})}
+\item
+  PMX (Partially Mapped Crossover) - wybierany jest losowy fragment (np.
+  4-8 zadań) z pierwszego rodzica i kopiowany do dziecka, reszta zadań
+  uzupełniana jest na podstawie drugiego rodzica, zgodnie z mapowaniem
+  między fragmentami.
+\item
+  OX (Order Crossover) - fragment z jednego rodzica zostaje zachowany,
+  pozostałe zadania są wypełniane w kolejności ich występowania w drugim
+  rodzicu; dziecko dziedziczy „kolejność względną'', a niekoniecznie
+  dokładne pozycje.
+\item
+  CX (Cycle Crossover) - tworzy cykle powiązań między genami rodziców
+  (np. zadanie A u pierwszego jest w tym samym miejscu co zadanie B u
+  drugiego), naprzemiennie bierze cykle z rodzica 1 i 2.
+\end{enumerate}
+
+\begin{itemize}
+\tightlist
+\item
+  local\_search\_tries: liczba prób lokalnego ulepszenia; czyli liczba
+  ruchów sąsiedzkich, które są losowo testowane na każdym dziecku, by
+  sprawdzić, czy da się poprawić makespan permutacji:
+\end{itemize}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi})}
+\item
+  swap - zamiana dwóch zadań miejscami,
+\item
+  2-opt - odwrócenie fragmentu permutacji zadań,
+\item
+  insertion - wyjęcie zadania i wstawienie go gdzie indziej.
+\end{enumerate}
+
+! Uwaga ! Zamiast testować ruchy swap, insertion i two\_opt osobno,
+funkcja local\_improve losowo wybiera jeden z nich w każdej próbie. Taki
+model pozwala zbadać kluczową różnicę wpływu włączenia lokalnej poprawy
+(nawiązanie do Algorytmu Memetycznego) w porównaniu do jej braku (co
+stanowi czysty Algorytm Genetyczny).
+
+\begin{itemize}
+\tightlist
+\item
+  elite (elitaryzm) oznacza liczbę najlepszych osobników (o najniższym
+  makespan) kopiowanych bez zmian do następnej generacji; chroni
+  najlepsze znalezione rozwiązania, ale zbyt duża wartość elite mogłaby
+  zmniejszyć różnorodność populacji.
+\end{itemize}
+
+\section{Usprawnienie czyli mechanizmu „Wnuka''
+(grandchild)}\label{usprawnienie-czyli-mechanizmu-wnuka-grandchild}
+
+Mechanizm „wnuka'' (grandchild) to proste rozszerzenie standardowego
+schematu rozmnażania. Po wygenerowaniu potomka (child) istnieje pewne
+prawdopodobieństwo p\_make\_grandchild, że z potomka powstanie dodatkowy
+twór - „wnuk'' (grandchild). Wnuk powstaje przez zastosowanie kolejnego,
+krótkiego operatora naprawczego (np. prostej mutacji lub szybkiego
+lokalnego ulepszania). Do populacji przyjmowany jest lepszy z pary
+(child vs grandchild), czyli ten o niższym makespanie. Intuicyjnie,
+zamiast przyjmować bezwarunkowo pojedynczego potomka, sprawdzamy jedną
+dodatkową opcję „bliźniaczą'' i zachowujemy tę, która daje lepszy wynik.
+
+Parametry:
+
+\begin{itemize}
+\item
+  p\_make\_grandchild (= {[}0,1{]}) - prawdopodobieństwo wygenerowania
+  wnuka dla każdego potomka.
+\item
+  grandchild\_method = \{`mutate', `local\_improve'\} - sposób
+  wytworzenia wnuka: prosta mutacja (swap) lub krótki lokalny search
+  (wykorzystujący tę samą funkcję local\_improve, co główna pętla).
+\item
+  grandchild\_local\_tries - liczba prób dla lokalnego ulepszania wnuka
+  (jeśli None, używany jest ogólny parametr local\_search\_tries).
+\end{itemize}
+
+Mechanizm wnuka daje prosty kompromis:
+
+\begin{itemize}
+\item
+  zwiększa szansę na znalezienie natychmiastowej ulepszonej wersji
+  potomka (przy niskim koszcie - jedno wywołanie mutacji lub krótkiego
+  local search);
+\item
+  jest prosty do kontrolowania przez pojedynczy parametr
+  p\_make\_grandchild.
+\end{itemize}
+
+Efekty obserwowane w eksperymentach:
+
+\begin{itemize}
+\item
+  umiarkowane zwiększenie jakości końcowych rozwiązań (niższe średnie i
+  lepsze mediany),
+\item
+  niewielki wzrost wariancji (jeśli p\_make\_grandchild zbyt duże),
+\end{itemize}
+
+\section{Konfiguracja eksperymentu
+(OFAT)}\label{konfiguracja-eksperymentu-ofat}
+
+\subsection{Parametry domyślne
+(Baseline)}\label{parametry-domyux15blne-baseline}
+
+Konfiguracja bazowa, od której wychodzimy przy testowaniu każdego
+parametru:
+
+\begin{itemize}
+\tightlist
+\item
+  \texttt{n\_pop}: 100,
+\item
+  \texttt{n\_gen}: 100,
+\item
+  \texttt{p\_mut}: 0.03,
+\item
+  \texttt{p\_cx}: 0.9,
+\item
+  \texttt{selection\_method}: `tournament',
+\item
+  \texttt{crossover\_method}: `pmx',
+\item
+  \texttt{local\_search\_tries}: 3,
+\item
+  \texttt{local\_moves}: {[}`swap',`two\_opt',`insertion'{]},
+\item
+  \texttt{elite}: 3,
+\item
+  \texttt{tournament\_k}: 3,
+\item
+  \texttt{p\_make\_grandchild}: 0.0,
+\item
+  \texttt{grandchild\_method}: `local\_improve',
+\item
+  \texttt{grandchild\_local\_tries}: 3
+\end{itemize}
+
+\subsection{Parametry testowane}\label{parametry-testowane}
+
+Dla każdego z poniższych parametrów testowano podane wartości, podczas
+gdy reszta pozostawała zgodna z konfiguracją \texttt{baseline}. Każda
+konfiguracja została uruchomiona \textbf{10 razy}.
+
+\begin{itemize}
+\tightlist
+\item
+  \texttt{n\_pop}: {[}50, 100, 200, 400{]}
+\item
+  \texttt{n\_gen}: {[}100, 300, 600, 1000{]}
+\item
+  \texttt{p\_mut}: {[}0.01, 0.03, 0.07, 0.15{]}
+\item
+  \texttt{p\_cx}: {[}0.6, 0.75, 0.9, 1.0{]}
+\item
+  \texttt{elite}: {[}1, 3, 5, 10{]}
+\item
+  \texttt{local\_search\_tries}: {[}0, 3, 7, 15{]}
+\item
+  \texttt{p\_make\_grandchild}: {[}0.0, 0.1, 0.3, 0.5{]}
+\item
+  \texttt{crossover\_method}: {[}`pmx', `ox', `cx'{]},
+\item
+  \texttt{selection\_method}: {[}`tournament', `roulette', `rank'{]}
+\end{itemize}
+
+\section{Analiza wyników}\label{analiza-wynikuxf3w}
+
+Dla każdego parametru przedstawiono:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\item
+  \textbf{Wykres pudełkowy (boxplot)} - pokazuje rozkład, medianę i
+  wartości odstające (outliery) końcowego makespanu.
+\item
+  \textbf{Wykres średniej i odchylenia standardowego} - obrazuje średnią
+  jakość i stabilność wyników.
+\item
+  \textbf{Wykres rozrzutu (scatter plot)} - przedstawia zależność między
+  czasem obliczeń a osiągniętym makespanem.
+\end{enumerate}
+
+\subsection{Dane PFSP\_50\_20}\label{dane-pfsp_50_20}
+
+\subsubsection{\texorpdfstring{parametr \texttt{n\_pop} (wielkość
+populacji)}{parametr n\_pop (wielkość populacji)}}\label{parametr-n_pop-wielkoux15bux107-populacji}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/n_pop/boxplot_best_makespan.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/n_pop/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/n_pop/time_vs_best_scatter.png}
+Zwiększanie wielkości populacji z 50 do 200 przynosi wyraźną poprawę
+zarówno średniego makespanu, jak i stabilności wyników (mniejszy
+rozrzut). Dalsze zwiększanie populacji do 400 nie daje już znaczącej
+poprawy jakości, natomiast znacząco wydłuża czas obliczeń, co widać na
+wykresie rozrzutu. Optymalny kompromis między jakością rozwiązania a
+czasem działania dla tej instancji problemu stanowi populacja o
+wielkości \textbf{200 osobników}.
+
+\subsubsection{\texorpdfstring{Parametr \texttt{n\_gen} (liczba
+generacji)}{Parametr n\_gen (liczba generacji)}}\label{parametr-n_gen-liczba-generacji}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/n_gen/boxplot_best_makespan.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/n_gen/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/n_gen/time_vs_best_scatter.png}
+
+Wraz ze wzrostem liczby generacji, średni makespan maleje, co jest
+oczekiwanym zachowaniem. Wartość \textbf{300-600 generacji} wydaje się
+być najlepszym wyborem, zapewniając dobre wyniki w akceptowalnym czasie.
+
+\subsubsection{\texorpdfstring{parametr \texttt{p\_mut}
+(prawdopodobieństwo
+mutacji)}{parametr p\_mut (prawdopodobieństwo mutacji)}}\label{parametr-p_mut-prawdopodobieux144stwo-mutacji}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/p_mut/boxplot_best_makespan.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/p_mut/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/p_mut/time_vs_best_scatter.png}
+
+Zbyt duża mutacja pogarsza stabilność. Optymalne wartość to 0,03.
+
+\subsubsection{\texorpdfstring{parametr \texttt{p\_cx}
+(prawdopodobieństwo
+krzyżowania)}{parametr p\_cx (prawdopodobieństwo krzyżowania)}}\label{parametr-p_cx-prawdopodobieux144stwo-krzyux17cowania}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/p_cx/boxplot_best_makespan.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/p_cx/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/p_cx/time_vs_best_scatter.png}
+Najlepsze wyniki pomiędzy 0,6-0,75.
+
+\subsubsection{\texorpdfstring{parametr \texttt{elite} (liczba osobników
+elitarnych)}{parametr elite (liczba osobników elitarnych)}}\label{parametr-elite-liczba-osobnikuxf3w-elitarnych}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/elite/boxplot_best_makespan.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/elite/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/elite/time_vs_best_scatter.png}
+
+Zwiększenie elity do 3-5 osobników stabilizuje wyniki i chroni najlepsze
+rozwiązania, bez utraty różnorodności. Powyżej 5 efekt jest marginalny.
+
+\subsubsection{\texorpdfstring{parametr \texttt{local\_search\_tries}
+(liczba prób ulepszenia
+lokalnego)}{parametr local\_search\_tries (liczba prób ulepszenia lokalnego)}}\label{parametr-local_search_tries-liczba-pruxf3b-ulepszenia-lokalnego}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/local_search_tries/boxplot_best_makespan.png}\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/local_search_tries/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/local_search_tries/time_vs_best_scatter.png}
+
+Wyłączenie mechanizmu lokalnego poszukiwania (\texttt{tries\ =\ 0}) daje
+zdecydowanie najgorsze wyniki. Już włączenie 3 prób powoduje drastyczną
+poprawę makespanu. Dalsze zwiększanie liczby prób (do 7 i 15) przynosi
+dodatkową, choć już mniejszą, poprawę. Wykres czasu do jakości pokazuje,
+że lepsze wyniki osiągane są kosztem dłuższego czasu działania.
+Mechanizm lokalnego ulepszenia jest \textbf{kluczowy dla jakości}.
+Wartość w zakresie \textbf{3-7 prób} stanowi dobry kompromis.
+
+\subsubsection{\texorpdfstring{parametr \texttt{p\_make\_grandchild}
+(prawdopodobieństwo
+``wnuka'')}{parametr p\_make\_grandchild (prawdopodobieństwo ``wnuka'')}}\label{parametr-p_make_grandchild-prawdopodobieux144stwo-wnuka}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/p_make_grandchild/boxplot_best_makespan.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/p_make_grandchild/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/p_make_grandchild/time_vs_best_scatter.png}
+Wraz ze wzrostem prawdopodobieństwa p\_make\_grandchild obserwuje się
+umiarkowaną poprawę jakości rozwiązań. Przy 0.5 jakość przestaje się
+poprawiać. Optymalna wartość znajduje się pomiędzy 0,1-0,2.
+
+\subsubsection{parametr
+crossover\_method}\label{parametr-crossover_method}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/crossover_method/boxplot_best_makespan.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/crossover_method/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/crossover_method/time_vs_best_scatter.png}
+
+Metody PMX i OX zapewniają podobną jakość, ale PMX daje stabilniejsze
+wyniki. To PMX wykorzystujemy jako podstawową metodę krzyżowania.
+
+\subsubsection{parametr
+selection\_method}\label{parametr-selection_method}
+
+\includegraphics[width=0.3\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/selection_method/boxplot_best_makespan.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/selection_method/mean_std.png}
+\includegraphics[width=0.3\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_50_20/selection_method/time_vs_best_scatter.png}
+Selekcja turniejowa jest najbardziej niezawodna, zapewnia szybkie
+zbieganie i stabilność wyników.
+
+\subsection{Dane PFSP\_200\_10}\label{dane-pfsp_200_10}
+
+\subsubsection{\texorpdfstring{parametr \texttt{n\_pop} (wielkość
+populacji)}{parametr n\_pop (wielkość populacji)}}\label{parametr-n_pop-wielkoux15bux107-populacji-1}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/n_pop/boxplot_best_makespan.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/n_pop/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/n_pop/time_vs_best_scatter.png}
+Wraz ze wzrostem populacji poprawia się jakość rozwiązań, ale przy
+znacznym wzroście czasu. Populacja 200-400 osobników to najlepszy
+kompromis.
+
+\subsubsection{\texorpdfstring{parametr \texttt{n\_gen} (liczba
+generacji)}{parametr n\_gen (liczba generacji)}}\label{parametr-n_gen-liczba-generacji-1}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/n_gen/boxplot_best_makespan.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/n_gen/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/n_gen/time_vs_best_scatter.png}
+
+Większa liczba generacji przynosi korzyści aż do około 600, po czym zysk
+jakościowy maleje.
+
+\subsubsection{\texorpdfstring{parametr \texttt{p\_mut}
+(prawdopodobieństwo
+mutacji)}{parametr p\_mut (prawdopodobieństwo mutacji)}}\label{parametr-p_mut-prawdopodobieux144stwo-mutacji-1}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/p_mut/boxplot_best_makespan.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/p_mut/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/p_mut/time_vs_best_scatter.png}
+
+Wartość 0,07 daje najlepszy efekt.
+
+\subsubsection{\texorpdfstring{parametr \texttt{p\_cx}
+(prawdopodobieństwo
+krzyżowania)}{parametr p\_cx (prawdopodobieństwo krzyżowania)}}\label{parametr-p_cx-prawdopodobieux144stwo-krzyux17cowania-1}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/p_cx/boxplot_best_makespan.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/p_cx/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/p_cx/time_vs_best_scatter.png}
+
+Wysokie prawdopodobieństwo krzyżowania zwiększa szansę na dobre
+kombinacje genów, 0,9 jest najbardziej efektywne.
+
+\subsubsection{\texorpdfstring{parametr \texttt{elite} (liczba osobników
+elitarnych)}{parametr elite (liczba osobników elitarnych)}}\label{parametr-elite-liczba-osobnikuxf3w-elitarnych-1}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/elite/boxplot_best_makespan.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/elite/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/elite/time_vs_best_scatter.png}
+
+Umiarkowany elitaryzm pozwala zachować balans między ochroną najlepszych
+a utrzymaniem różnorodności. Optymalnie 3 elity.
+
+\subsubsection{\texorpdfstring{parametr \texttt{local\_search\_tries}
+(liczba prób ulepszenia
+lokalnego)}{parametr local\_search\_tries (liczba prób ulepszenia lokalnego)}}\label{parametr-local_search_tries-liczba-pruxf3b-ulepszenia-lokalnego-1}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/local_search_tries/boxplot_best_makespan.png}\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/local_search_tries/mean_std.png}\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/local_search_tries/time_vs_best_scatter.png}
+
+Większa liczba prób ulepszenia lokalnego poprawia wyniki, ale rośnie też
+czas obliczeń. 7 prób to dobry kompromis.
+
+\subsubsection{\texorpdfstring{parametr \texttt{p\_make\_grandchild}
+(prawdopodobieństwo
+``wnuka'')}{parametr p\_make\_grandchild (prawdopodobieństwo ``wnuka'')}}\label{parametr-p_make_grandchild-prawdopodobieux144stwo-wnuka-1}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/p_make_grandchild/boxplot_best_makespan.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/p_make_grandchild/mean_std.png}\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/p_make_grandchild/time_vs_best_scatter.png}
+
+Wartości około 0,3 przynoszą wyraźną poprawę jakości bez dużego wzrostu
+czasu działania.
+
+\subsubsection{\texorpdfstring{parametr \texttt{crossover\_method}
+(metody
+krzyżowania)}{parametr crossover\_method (metody krzyżowania)}}\label{parametr-crossover_method-metody-krzyux17cowania}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/crossover_method/boxplot_best_makespan.png}\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/crossover_method/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/crossover_method/time_vs_best_scatter.png}
+
+PMX pozostaje najbardziej stabilny.
+
+\subsubsection{\texorpdfstring{parametr \texttt{selection\_method}
+(metody
+selekcji)}{parametr selection\_method (metody selekcji)}}\label{parametr-selection_method-metody-selekcji}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/selection_method/boxplot_best_makespan.png}\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/selection_method/mean_std.png}\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_200_10/selection_method/time_vs_best_scatter.png}
+
+Selekcja turniejowa zapewnia najlepszy stosunek jakości do czasu.
+
+\subsection{Dane PFSP\_100\_10}\label{dane-pfsp_100_10}
+
+\subsubsection{\texorpdfstring{parametr \texttt{n\_pop} (wielkość
+populacji)}{parametr n\_pop (wielkość populacji)}}\label{parametr-n_pop-wielkoux15bux107-populacji-2}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/n_pop/boxplot_best_makespan.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/n_pop/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/n_pop/time_vs_best_scatter.png}
+
+Wielkość populacji 200 zapewnia najwyższą jakość przy rozsądnym czasie
+działania.
+
+\subsubsection{\texorpdfstring{parametr \texttt{n\_gen} (liczba
+generacji)}{parametr n\_gen (liczba generacji)}}\label{parametr-n_gen-liczba-generacji-2}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/n_gen/boxplot_best_makespan.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/n_gen/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/n_gen/time_vs_best_scatter.png}
+
+Wyniki poprawiają się wraz z generacjami do około 600, potem korzyści są
+minimalne.
+
+\subsubsection{\texorpdfstring{parametr \texttt{p\_mut}
+(prawdopodobieństwo
+mutacji)}{parametr p\_mut (prawdopodobieństwo mutacji)}}\label{parametr-p_mut-prawdopodobieux144stwo-mutacji-2}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/p_mut/boxplot_best_makespan.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/p_mut/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/p_mut/time_vs_best_scatter.png}
+
+Najlepszą równowagę między różnorodnością a stabilnością zapewnia
+wartość 0,07.
+
+\subsubsection{\texorpdfstring{parametr \texttt{p\_cx}
+(prawdopodobieństwo
+krzyżowania)}{parametr p\_cx (prawdopodobieństwo krzyżowania)}}\label{parametr-p_cx-prawdopodobieux144stwo-krzyux17cowania-2}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/p_cx/boxplot_best_makespan.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/p_cx/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/p_cx/time_vs_best_scatter.png}
+
+Wartość około 0,75 umożliwia najlepsze łączenie cech rodziców i stabilne
+wyniki.
+
+\subsubsection{\texorpdfstring{parametr \texttt{elite} (liczba osobników
+elitarnych)}{parametr elite (liczba osobników elitarnych)}}\label{parametr-elite-liczba-osobnikuxf3w-elitarnych-2}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/elite/boxplot_best_makespan.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/elite/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/elite/time_vs_best_scatter.png}
+
+Najlepszy efekt daje 3 elity, zapewniając stabilność i brak utraty
+różnorodności.
+
+\subsubsection{\texorpdfstring{parametr \texttt{local\_search\_tries}
+(liczba prób ulepszenia
+lokalnego)}{parametr local\_search\_tries (liczba prób ulepszenia lokalnego)}}\label{parametr-local_search_tries-liczba-pruxf3b-ulepszenia-lokalnego-2}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/local_search_tries/boxplot_best_makespan.png}\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/local_search_tries/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/local_search_tries/time_vs_best_scatter.png}
+
+Brak lokalnego ulepszania znacząco pogarsza wyniki; 3-7 prób daje
+wyraźną poprawę jakości.
+
+\subsubsection{\texorpdfstring{parametr \texttt{p\_make\_grandchild}
+(prawdopodobieństwo
+``wnuka'')}{parametr p\_make\_grandchild (prawdopodobieństwo ``wnuka'')}}\label{parametr-p_make_grandchild-prawdopodobieux144stwo-wnuka-2}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/p_make_grandchild/boxplot_best_makespan.png}\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/p_make_grandchild/mean_std.png}\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/p_make_grandchild/time_vs_best_scatter.png}
+
+Najlepsze rezultaty uzyskuje się dla p\_make\_grandchild = 0,1, co
+umiarkowanie poprawia jakość rozwiązań.
+
+\subsubsection{\texorpdfstring{parametr \texttt{crossover\_method}
+(metody
+krzyżowania)}{parametr crossover\_method (metody krzyżowania)}}\label{parametr-crossover_method-metody-krzyux17cowania-1}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/crossover_method/boxplot_best_makespan.png}\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/crossover_method/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/crossover_method/time_vs_best_scatter.png}
+
+PMX i CX wypadają podobnie, jednak PMX daje bardziej spójne wyniki.
+
+\subsubsection{\texorpdfstring{parametr \texttt{selection\_method}
+(metody
+selekcji)}{parametr selection\_method (metody selekcji)}}\label{parametr-selection_method-metody-selekcji-1}
+
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/selection_method/boxplot_best_makespan.png}\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/selection_method/mean_std.png}
+\includegraphics[width=0.32\linewidth,height=\textheight,keepaspectratio]{results_excel_pfsp/plots/PFSP_100_10/selection_method/time_vs_best_scatter.png}
+
+Turniejowa selekcja utrzymuje stabilność i szybkość.
+
+\section{Podsumowanie i najlepszy zestaw
+parametrów}\label{podsumowanie-i-najlepszy-zestaw-parametruxf3w}
+
+\subsection{50 zadań i 20 maszyn}\label{zadaux144-i-20-maszyn}
+
+Na podstawie przeprowadzonej analizy dla problemu PFSP z 50 zadaniami i
+20 maszynami, dostajemy najlepszy wynik (best\_makespan): 3761. To
+dzięki konfiguracji:
+
+\begin{itemize}
+\tightlist
+\item
+  n\_pop = 200\\
+\item
+  n\_gen = 100\\
+\item
+  p\_mut = 0.03\\
+\item
+  p\_cx = 0.9\\
+\item
+  selection\_method = tournament\\
+\item
+  crossover\_method = pmx\\
+\item
+  local\_search\_tries = 3\\
+\item
+  elite = 3\\
+\item
+  p\_make\_grandchild = 0
+\end{itemize}
+
+Najlepszy wynik uzyskaliśmy przy umiarkowanej populacji i niewielkiej
+liczbie generacji, co sugeruje, że już w początkowych etapach algorytm
+zbiega do wysokiej jakości rozwiązań. Optymalne okazały się umiarkowane
+wartości mutacji i wysokie krzyżowanie, a wyłączenie mechanizmu
+(rzekomego ulepszenia) „wnuka'' skróciło czas obliczeń bez pogorszenia
+jakości. Konfiguracja ta jest najbardziej efektywna obliczeniowo.
+
+\subsection{200 zadań i 10 maszyn}\label{zadaux144-i-10-maszyn}
+
+Na podstawie przeprowadzonej analizy dla problemu PFSP składającego się
+z 200 zadań i 20 maszyn, dostajemy najlepszy wynik (best\_makespan):
+10592. To dzięki konfiguracji:
+
+\begin{itemize}
+\tightlist
+\item
+  n\_pop = 100\\
+\item
+  n\_gen = 1000\\
+\item
+  p\_mut = 0.03\\
+\item
+  p\_cx = 0.9\\
+\item
+  selection\_method = tournament\\
+\item
+  crossover\_method = pmx\\
+\item
+  local\_search\_tries = 3\\
+\item
+  elite = 3\\
+\item
+  p\_make\_grandchild = 0
+\end{itemize}
+
+Najlepszy wynik uzyskaliśmy przy dużej liczbie generacji i umiarkowanej
+populacji, co wskazuje, że kluczowe znaczenie ma dłuższa ewolucja
+populacji. Umiarkowane prawdopodobieństwo mutacji i wysokie krzyżowanie
+pozwoliły zachować równowagę. Brak mechanizmu „wnuka'' przyspieszył
+obliczenia bez utraty jakości, dzięki czemu konfiguracja ta jest
+najbardziej skuteczna i stabilna dla dużej instancji.
+
+\subsection{200 zadań i 10 maszyn}\label{zadaux144-i-10-maszyn-1}
+
+Na podstawie przeprowadzonej analizy dla problemu PFSP składającego się
+z 100 zadań i 10 maszyn, dostajemy najlepszy wynik (best\_makespan):
+5516. To dzięki konfiguracji:
+
+\begin{itemize}
+\tightlist
+\item
+  n\_pop = 100\\
+\item
+  n\_gen = 1000\\
+\item
+  p\_mut = 0.03\\
+\item
+  p\_cx = 0.9\\
+\item
+  selection\_method = tournament\\
+\item
+  crossover\_method = pmx\\
+\item
+  local\_search\_tries = 3\\
+\item
+  elite = 3\\
+\item
+  p\_make\_grandchild = 0
+\end{itemize}
+
+Najlepszy wynik dostaliśmy przy dużej liczbie generacji i umiarkowanej
+populacji. Stabilna konfiguracja z niskim prawdopodobieństwem mutacji i
+wysokim krzyżowaniem pozwoliła na skuteczną eksplorację przestrzeni
+rozwiązań. W każdym przypadku lepsze wyniki otrzymaliśmy bez mechanizmu
+wnuka.
+
+\subsection{Wnioski}\label{wnioski}
+
+W każdym z trzech przypadków dla najlepszych wyników te parametry
+pozostały niezmienne:
+
+\begin{itemize}
+\tightlist
+\item
+  p\_mut = 0.03\\
+\item
+  p\_cx = 0.9\\
+\item
+  selection\_method = tournament\\
+\item
+  crossover\_method = pmx\\
+\item
+  local\_search\_tries = 3\\
+\item
+  elite = 3\\
+\item
+  p\_make\_grandchild = 0
+\end{itemize}
+
+Taka konfiguracja okazała się najbardziej uniwersalna, zapewniając
+jednocześnie wysoką jakość rozwiązań i stabilność działania algorytmu.
+
+\end{document}

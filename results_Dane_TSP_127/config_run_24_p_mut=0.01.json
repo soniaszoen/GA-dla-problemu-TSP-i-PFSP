@@ -1,0 +1,23 @@
+{
+  "run_id": 24,
+  "timestamp": "20251022_182355",
+  "seed": 213645399,
+  "param_name": "p_mut",
+  "param_value": 0.01,
+  "full_config": {
+    "n_pop": 80,
+    "n_gen": 200,
+    "p_mut": 0.01,
+    "p_cx": 0.9,
+    "selection_method": "tournament",
+    "crossover_method": "pmx",
+    "local_search_tries": 5,
+    "local_moves": [
+      "swap",
+      "two_opt",
+      "insertion"
+    ],
+    "elite": 1,
+    "tournament_k": 3
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "run_id": 56,
+  "timestamp": "20251022_190210",
+  "seed": 215939611,
+  "param_name": "selection_method",
+  "param_value": "rank",
+  "full_config": {
+    "n_pop": 80,
+    "n_gen": 200,
+    "p_mut": 0.05,
+    "p_cx": 0.9,
+    "selection_method": "rank",
+    "crossover_method": "pmx",
+    "local_search_tries": 5,
+    "local_moves": [
+      "swap",
+      "two_opt",
+      "insertion"
+    ],
+    "elite": 1,
+    "tournament_k": 3
+  }
+}
